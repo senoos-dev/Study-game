@@ -12,6 +12,7 @@ public:
     virtual string getPrompt() const = 0;
     virtual bool checkAnswer(const string& answer) const = 0;
     virtual string getTypeName() const = 0;
+    virtual int getPenaltyDamage() const = 0;
 };
 
 #endif

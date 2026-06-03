@@ -1,24 +1,26 @@
 #include "CodePuzzle.hpp"
-
 #include <algorithm>
 #include <cctype>
 
-using namespace std;
+CodePuzzle::CodePuzzle(const std::string& prompt, const std::string& code, int penaltyDamage)
+    : m_prompt(prompt), m_code(code), m_penaltyDamage(penaltyDamage) {}
 
-CodePuzzle::CodePuzzle(const string& hint, const string& code) : m_hint(hint), m_code(code) {}
-
-string CodePuzzle::getPrompt() const {
-    return m_hint;
+std::string CodePuzzle::getPrompt() const {
+    return m_prompt;
 }
 
-bool CodePuzzle::checkAnswer(const string& answer) const {
-    string a = answer;
-    string c = m_code;
-    transform(a.begin(), a.end(), a.begin(), [](unsigned char ch) { return (char)tolower(ch); });
-    transform(c.begin(), c.end(), c.begin(), [](unsigned char ch) { return (char)tolower(ch); });
-    return a == c;
+bool CodePuzzle::checkAnswer(const std::string& answer) const {
+    std::string a = answer;
+    std::string b = m_code;
+    for (char& c : a) c = std::tolower(c);
+    for (char& c : b) c = std::tolower(c);
+    return a == b;
 }
 
-string CodePuzzle::getTypeName() const {
-    return "code";
+std::string CodePuzzle::getTypeName() const {
+    return "CodePuzzle";
+}
+
+int CodePuzzle::getPenaltyDamage() const {
+    return m_penaltyDamage;
 }

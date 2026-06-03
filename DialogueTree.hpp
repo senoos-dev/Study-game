@@ -5,9 +5,9 @@
 #include <string>
 #include <vector>
 
-#include "../Character.hpp"
-#include "../Location.hpp"
-#include "../NPC.hpp"
+#include "Character.hpp"
+#include "Location.hpp"
+#include "NPC.hpp"
 
 using namespace std;
 
@@ -21,8 +21,8 @@ enum class DialogueEffectType {
 
 struct DialogueEffect {
     DialogueEffectType type = DialogueEffectType::None;
-    Item item = Item(0, 0, "");
-    string locationId;
+    int itemId = 0;
+    std::string itemName = "";
     int amount = 0;
 };
 

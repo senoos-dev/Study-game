@@ -1,7 +1,5 @@
 #include "DialogueTree.hpp"
-
 #include <iostream>
-
 #include "Logger.hpp"
 
 using namespace std;
@@ -26,7 +24,7 @@ DialogueTree DialogueTree::createHermitTree() {
     nodes.push_back(DialogueNode{
         "Старец: Умный ответ. Возьми зелье и слушай: код сейфа — «орк».",
         {
-            {"Спасибо", -1, {DialogueEffectType::GiveItem, Item(10, 40, "Зелье старца"), "", 0}},
+            {"Спасибо", -1, {DialogueEffectType::GiveItem, 10, "Зелье старца", 40}},
             {"А если я ошибусь в коде?", 3, {}},
         }});
 
@@ -34,14 +32,14 @@ DialogueTree DialogueTree::createHermitTree() {
         "Старец: Ты груб. Теперь я не друг.",
         {
             {"Извините", -1, {}},
-            {"Сражайся со мной!", -1, {DialogueEffectType::SetHostile, Item(0, 0, ""), "", 0}},
+            {"Сражайся со мной!", -1, {DialogueEffectType::SetHostile, 0, "", 0}},
         }});
 
     nodes.push_back(DialogueNode{
         "Старец: Тогда открою тебе потайной проход... если пожалеешь соседей.",
         {
-            {"Открывай проход", -1, {DialogueEffectType::OpenLocation, Item(0, 0, ""), "hall", 0}},
-            {"Нет, я сам справлюсь", -1, {DialogueEffectType::HealPlayer, Item(0, 0, ""), "", 15}},
+            {"Открывай проход", -1, {DialogueEffectType::OpenLocation, 0, "hall", 0}},
+            {"Нет, я сам справлюсь", -1, {DialogueEffectType::HealPlayer, 0, "", 15}},
         }});
 
     return DialogueTree(nodes);
@@ -53,17 +51,20 @@ void DialogueTree::applyEffect(const DialogueEffect& effect,
                                Location* locationToOpen) {
     switch (effect.type) {
     case DialogueEffectType::SetHostile:
-        npc.setMood(NpcMood::Hostile);
+        npc.becomeHostile();
         Logger::log("Dialogue: NPC " + npc.getName() + " became hostile");
         break;
     case DialogueEffectType::GiveItem:
-        player.add_to_inventory(effect.item);
-        Logger::log("Dialogue: gave item " + effect.item.get_name());
+        {
+            unique_ptr<Item> newItem = make_unique<Item>(effect.itemId, effect.amount, effect.itemName);
+            player.add_to_inventory(move(newItem));
+            Logger::log("Dialogue: gave item " + effect.itemName);
+        }
         break;
     case DialogueEffectType::OpenLocation:
         if (locationToOpen != nullptr) {
-            locationToOpen->setOpen(true);
-            Logger::log("Dialogue: opened location " + locationToOpen->getId());
+            locationToOpen->open();
+            Logger::log("Dialogue: opened location " + to_string(locationToOpen->getId()));
         } else {
             Logger::log("Dialogue: open location failed (null)");
         }

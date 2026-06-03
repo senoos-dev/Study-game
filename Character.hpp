@@ -25,6 +25,7 @@ public:
     void equipWeapon(int weaponId);
     void unequipWeapon();
     int getTotalDamage() const;
+    void set_location(const std::string& newLoc);
 
 private:
     int health = 100;

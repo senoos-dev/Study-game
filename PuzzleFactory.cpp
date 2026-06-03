@@ -9,8 +9,8 @@ using namespace std;
 unique_ptr<Puzzle> PuzzleFactory::createById(const string& puzzleId) {
     if (puzzleId == "riddle_crypt") {
         return make_unique<RiddlePuzzle>(
-            "Загадка: что всегда уходит, но остаётся на месте? (одно слово)",
-            "время");
+            "Загадка: что всегда уходит, но остаётся на месте?",
+             "время");
     }
     if (puzzleId == "math_gate") {
         return make_unique<MathPuzzle>(17, 5, '*');

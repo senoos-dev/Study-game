@@ -1,32 +1,26 @@
 #include "RiddlePuzzle.hpp"
-
 #include <algorithm>
 #include <cctype>
 
-using namespace std;
+RiddlePuzzle::RiddlePuzzle(const std::string& prompt, const std::string& answer, int penaltyDamage)
+    : m_prompt(prompt), m_answer(answer), m_penaltyDamage(penaltyDamage) {}
 
-static string trimAndLower(string s) {
-    while (!s.empty() && isspace((unsigned char)s.front())) {
-        s.erase(s.begin());
-    }
-    while (!s.empty() && isspace((unsigned char)s.back())) {
-        s.pop_back();
-    }
-    transform(s.begin(), s.end(), s.begin(), [](unsigned char c) { return (char)tolower(c); });
-    return s;
+std::string RiddlePuzzle::getPrompt() const {
+    return m_prompt;
 }
 
-RiddlePuzzle::RiddlePuzzle(const string& question, const string& correctAnswer)
-    : m_question(question), m_answer(correctAnswer) {}
-
-string RiddlePuzzle::getPrompt() const {
-    return m_question;
+bool RiddlePuzzle::checkAnswer(const std::string& answer) const {
+    std::string a = answer;
+    std::string correct = m_answer;
+    for (char& c : a) c = std::tolower(c);
+    for (char& c : correct) c = std::tolower(c);
+    return a == correct;
 }
 
-bool RiddlePuzzle::checkAnswer(const string& answer) const {
-    return trimAndLower(answer) == trimAndLower(m_answer);
+std::string RiddlePuzzle::getTypeName() const {
+    return "RiddlePuzzle";
 }
 
-string RiddlePuzzle::getTypeName() const {
-    return "riddle";
+int RiddlePuzzle::getPenaltyDamage() const {
+    return m_penaltyDamage;
 }

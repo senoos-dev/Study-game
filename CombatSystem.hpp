@@ -3,8 +3,8 @@
 
 #include <iostream>
 
-#include "../Character.hpp"
-#include "../NPC.hpp"
+#include "Character.hpp"
+#include "NPC.hpp"
 
 using namespace std;
 

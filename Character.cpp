@@ -93,3 +93,6 @@ int Character::getTotalDamage() const {
     }
     return damage + bonus;
 }
+void Character::set_location(const std::string& newLoc) {
+    location = newLoc;
+}

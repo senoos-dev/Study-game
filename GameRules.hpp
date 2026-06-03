@@ -3,8 +3,8 @@
 
 #include <string>
 
-#include "../Character.hpp"
-#include "../Location.hpp"
+#include "Character.hpp"
+#include "Location.hpp"
 
 using namespace std;
 
