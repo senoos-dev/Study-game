@@ -1,31 +1,37 @@
 #ifndef CHARACTER_HPP
 #define CHARACTER_HPP
 
-#include <string>      // ❗ Добавил - для string
-#include <vector>      // ❗ Добавил - для vector
+#include <string>
+#include <vector>
+#include <memory>
 #include "Item.hpp"
 
-using namespace std;   // ❗ Добавил - чтобы не писать std:: везде
+using namespace std;
 
 class Character {
 public:
-    Character(string my_location);  // Конструктор теперь только объявлен
+    Character(string my_location);
 
-    int get_health() const;         // ❗ Добавил const
+    int get_health() const;
     void add_health(int x);
-    int get_damage() const;         // ❗ Добавил const
+    int get_damage() const;
     void set_damage(int x);
-    void use_poison(int ID);
+    void use_potion(int ID);
     void attack_me(int x);
-    void add_to_inventory(Item x);
+    void add_to_inventory(unique_ptr<Item> x);
     void remove_from_inventory(int i);
-    void print() const;             // ❗ Добавил const (не меняет объект)
+    void print() const;
+
+    void equipWeapon(int weaponId);
+    void unequipWeapon();
+    int getTotalDamage() const;
 
 private:
     int health = 100;
     int damage = 1;
     string location = "";
-    vector<Item> inventory = {};
+    vector<unique_ptr<Item>> inventory;
+    int m_equippedWeaponId = -1;
 };
 
 #endif
