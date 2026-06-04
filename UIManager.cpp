@@ -54,5 +54,4 @@ void UIManager::showMessage(const string& message) {
 void UIManager::waitForEnter() {
     cout << "\nНажми Enter чтобы продолжить...";
     cin.get();
-    cin.get();
 }

@@ -12,6 +12,7 @@ public:
     GameEngine();
     ~GameEngine();
     
+    
     bool init();
     void run();
     
@@ -26,6 +27,7 @@ private:
     void showEquipMenu();
     
     void setupLocations();
+    void resetGame();
     
     std::unique_ptr<Character> m_player;
     std::vector<std::unique_ptr<Location>> m_locations;

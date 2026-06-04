@@ -26,8 +26,9 @@ void AsciiRenderer::render(const vector<string>& map, int playerX, int playerY) 
 }
 
 void AsciiRenderer::drawHUD(int health, int totalDamage) {
-    cout << "❤️ HP: " << health << "/100";
-    cout << " | ⚔️ Урон: " << totalDamage << "\n";
+    cout << "========================================\n";
+    cout << "HP: " << health << "/100";
+    cout << " | Урон: " << totalDamage << "\n";
     cout << "========================================\n";
     cout << "WASD - движение | E - действие | I - инвентарь | R - экипировка | Q - выход\n";
 }

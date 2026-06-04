@@ -13,8 +13,13 @@ std::string MathPuzzle::getPrompt() const {
     return std::to_string(m_a) + " " + m_op + " " + std::to_string(m_b) + " = ?";
 }
 
-bool MathPuzzle::checkAnswer(const std::string& answer) const {
-    return std::stoi(answer) == m_result;
+bool MathPuzzle::checkAnswer(const string& answer) const {
+    if (answer.empty()) return false;
+    try {
+        return stoi(answer) == m_result;
+    } catch (...) {
+        return false;
+    }
 }
 
 std::string MathPuzzle::getTypeName() const {

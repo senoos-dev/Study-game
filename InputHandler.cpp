@@ -14,8 +14,8 @@ Action InputHandler::getAction() {
         case 'd': case 'D': return Action::MoveRight;
         case 'e': case 'E': return Action::Interact;
         case 'i': case 'I': return Action::OpenInventory;
-        case 'q': case 'Q': return Action::Quit;
         case 'r': case 'R': return Action::EquipWeapon;
+        case 'q': case 'Q': return Action::Quit;
         default: return Action::None;
     }
 }
