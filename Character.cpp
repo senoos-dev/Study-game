@@ -34,10 +34,12 @@ void Character::use_potion(int ID) {
     for (int i = 0; i < (int)inventory.size(); i++) {
         if (inventory[i]->get_ID() == ID) {
             add_health(inventory[i]->get_health_value());
-            remove_from_inventory(i);
-            i--;
+            inventory.erase(inventory.begin() + i);
+            cout << "Зелье использовано! Твоё HP: " << health << "\n";
+            return;
         }
     }
+    cout << "Зелье с ID " << ID << " не найдено!\n";
 }
 
 void Character::attack_me(int x) {

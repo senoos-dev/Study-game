@@ -27,6 +27,13 @@ public:
     int getTotalDamage() const;
     void set_location(const std::string& newLoc);
 
+    bool hasItem(int ID) const {
+    for (const auto& item : inventory) {
+        if (item->get_ID() == ID) return true;
+    }
+    return false;
+}
+
 private:
     int health = 100;
     int damage = 1;
