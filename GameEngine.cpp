@@ -9,11 +9,15 @@
 #include "HealthPotion.hpp"
 #include "RiddlePuzzle.hpp"
 #include "MathPuzzle.hpp"
+#include "CodePuzzle.hpp"
+#include "SaveManager.hpp"
+#include "Logger.hpp"
 #include <iostream>
 #include <string>
 #include <algorithm>
 #include <cctype>
 #include <random>
+#include <chrono>
 
 using namespace std;
 
@@ -24,6 +28,9 @@ string trim(const string& str) {
     return str.substr(first, last - first + 1);
 }
 
+static random_device rd;
+static mt19937 gen(rd());
+
 GameEngine::GameEngine() 
     : m_currentLocationId(0), m_playerX(1), m_playerY(1), m_isRunning(true), m_victory(false) {}
 
@@ -31,10 +38,7 @@ GameEngine::~GameEngine() = default;
 
 void GameEngine::resetGame() {
     m_player = make_unique<Character>("Стартовая локация");
-    (*m_player).add_to_inventory(make_unique<HealthPotion>(1, "Малое зелье", 30));
-    (*m_player).add_to_inventory(make_unique<HealthPotion>(2, "Большое зелье", 60));
     (*m_player).add_to_inventory(make_unique<Weapon>(3, "Меч", 8));
-    (*m_player).add_to_inventory(make_unique<Weapon>(4, "Топор", 15));
     
     m_currentLocationId = 0;
     m_playerX = 1;
@@ -55,10 +59,9 @@ bool GameEngine::init() {
 void GameEngine::setupLocations() {
     m_locations.clear();
     
-    // Локация 1: Стартовая (открыта)
     vector<string> map1 = {
         "##########",
-        "#........#",
+        "#.......D#",
         "#..C.....#",
         "#........#",
         "#.......D#",
@@ -68,10 +71,10 @@ void GameEngine::setupLocations() {
     };
     auto loc1 = make_unique<Location>(1, "Стартовая комната", map1);
     loc1->addConnection(2);
+    loc1->addConnection(3);
     loc1->open();
     m_locations.push_back(move(loc1));
     
-    // Локация 2: Тёмный лес (Мудрец)
     vector<string> map2 = {
         "##########",
         "#........#",
@@ -79,37 +82,46 @@ void GameEngine::setupLocations() {
         "#........#",
         "#.......D#",
         "#....N...#",
-        "#........#",
+        "#D.......#",
         "##########"
     };
     auto loc2 = make_unique<Location>(2, "Тёмный лес", map2);
     loc2->addConnection(1);
     loc2->addConnection(3);
-    loc2->setPuzzle(make_unique<RiddlePuzzle>("Зимой и летом одним цветом? (одно слово)", "елка", 15));
+    
+    vector<pair<string, string>> riddles = {
+        {"Зимой и летом одним цветом? (одно слово)", "elka"},
+        {"Что можно сломать, не прикасаясь к нему? (одно слово)", "obeshaniye"},
+        {"Что не имеет начала и конца? (одно слово)", "kolco"},
+        {"Висит груша, нельзя скушать", "lampochka"},
+        {"На березе росло 5 яблок. 2 упало, сколько осталось?", "0"}
+    };
+    uniform_int_distribution<> dis(0, riddles.size() - 1);
+    int idx = dis(gen);
+    loc2->setPuzzle(make_unique<RiddlePuzzle>(riddles[idx].first, riddles[idx].second, 15));
     m_locations.push_back(move(loc2));
     
-    // Локация 3: Подземелье (Торговец)
     vector<string> map3 = {
         "##########",
         "#...C....#",
-        "#........#",
+        "#D.......#",
         "#........#",
         "#.......D#",
         "#....N...#",
-        "#........#",
+        "#.D......#",
         "##########"
     };
     auto loc3 = make_unique<Location>(3, "Подземелье", map3);
+    loc3->addConnection(1);
     loc3->addConnection(2);
     loc3->addConnection(4);
     loc3->setPuzzle(make_unique<MathPuzzle>(2, 2, '*', 20));
     m_locations.push_back(move(loc3));
     
-    // Локация 4: Пещера стража (Стражник)
     vector<string> map4 = {
         "##########",
         "#........#",
-        "#........#",
+        "#D.......#",
         "#........#",
         "#.......D#",
         "#....N...#",
@@ -119,23 +131,38 @@ void GameEngine::setupLocations() {
     auto loc4 = make_unique<Location>(4, "Пещера стража", map4);
     loc4->addConnection(3);
     loc4->addConnection(5);
-    loc4->setPuzzle(make_unique<RiddlePuzzle>("Что можно сломать, не прикасаясь к нему? (одно слово)", "обещание", 25));
+    
+    vector<pair<string, string>> codePuzzles = {
+        {"Код из 4 букв — время года с лютым холодом", "zima"},
+        {"Код из 3 букв — краткое название учебного заведения", "pgu"},
+        {"Код из 5 букв — имена 2 разработчиков (одинаковые)", "slava"}
+    };
+    uniform_int_distribution<> disCode(0, codePuzzles.size() - 1);
+    int idxCode = disCode(gen);
+    loc4->setPuzzle(make_unique<CodePuzzle>(codePuzzles[idxCode].first, codePuzzles[idxCode].second, 25));
     m_locations.push_back(move(loc4));
     
-    // Локация 5: Финальная сокровищница
     vector<string> map5 = {
         "##########",
         "#........#",
         "#........#",
         "#........#",
         "#.......D#",
-        "#........#",
+        "#..C.....#",
         "#........#",
         "##########"
     };
     auto loc5 = make_unique<Location>(5, "Сокровищница", map5);
     loc5->addConnection(4);
-    loc5->setPuzzle(make_unique<RiddlePuzzle>("Что не имеет начала и конца? (одно слово)", "кольцо", 30));
+    
+    vector<pair<string, string>> finalRiddles = {
+        {"Продолжите: У лукоморья дуб зеленый, златая цепь на дубе ...", "tom"},
+        {"Самый умный персонаж из Винни Пуха", "sova"},
+        {"Что можно увидеть с закрытыми глазами?", "son"}
+    };
+    uniform_int_distribution<> disFinal(0, finalRiddles.size() - 1);
+    int idxFinal = disFinal(gen);
+    loc5->setPuzzle(make_unique<RiddlePuzzle>(finalRiddles[idxFinal].first, finalRiddles[idxFinal].second, 30));
     m_locations.push_back(move(loc5));
     
     m_map = m_locations[0]->getAsciiArt();
@@ -195,6 +222,12 @@ void GameEngine::processInput() {
         case Action::EquipWeapon:
             showEquipMenu();
             break;
+        case Action::QuickSave:
+            saveGame();
+            break;
+        case Action::QuickLoad:
+            loadGame();
+            break;
         case Action::Quit:
             m_isRunning = false;
             break;
@@ -214,7 +247,7 @@ void GameEngine::movePlayer(int newX, int newY) {
     
     if (target == '#') {
         cout << "\n[!] Там стена, не пройти!\n";
-        cout << "Нажми Enter чтобы продолжить...";
+        cout << "Нажми Enter...";
         cin.ignore();
         cin.get();
         return;
@@ -226,64 +259,60 @@ void GameEngine::movePlayer(int newX, int newY) {
     if (target == 'D') {
         Location* currentLoc = m_locations[m_currentLocationId].get();
         
-        if (!currentLoc->isOpen()) {
+        vector<pair<int,int>> doors;
+        for (int y = 0; y < (int)m_map.size(); y++) {
+            for (int x = 0; x < (int)m_map[y].size(); x++) {
+                if (m_map[y][x] == 'D') {
+                    doors.push_back({x, y});
+                }
+            }
+        }
+        
+        int doorIndex = -1;
+        for (size_t i = 0; i < doors.size(); i++) {
+            if (doors[i].first == newX && doors[i].second == newY) {
+                doorIndex = i;
+                break;
+            }
+        }
+        
+        const auto& connections = currentLoc->getConnections();
+        int targetId = -1;
+        if (doorIndex >= 0 && doorIndex < (int)connections.size()) {
+            targetId = connections[doorIndex];
+        }
+        
+        if (targetId == -1) {
+            cout << "\n[!] Ошибка: нет связи для этой двери!\n";
+            cout << "Нажми Enter...";
+            cin.get();
+            return;
+        }
+        
+        Location* targetLoc = m_locations[targetId - 1].get();
+        
+        if (!targetLoc->isOpen()) {
             bool hasKey = (*m_player).getItemCount(10) > 0;
             
             if (hasKey) {
-                cout << "\n[!] У тебя есть ключ! Использовать его, чтобы открыть дверь? (y/n): ";
+                cout << "\n[!] У тебя есть ключ! Использовать? (y/n): ";
                 char useKey;
                 cin >> useKey;
                 if (useKey == 'y' || useKey == 'Y') {
                     (*m_player).remove_from_inventory_by_id(10);
-                    currentLoc->open();
+                    targetLoc->open();
                     cout << "\n[!] Ты использовал ключ! Локация открыта!\n";
-                    cout << "Нажми Enter чтобы продолжить...";
-                    cin.ignore();
+                    cout << "Нажми Enter...";
                     cin.get();
-                } else {
-                    int damage = 0;
-                    string answer;
-                    cout << "\n[!] Локация закрыта! Решите головоломку:\n";
-                    if (currentLoc->getPuzzle()) {
-                        cout << currentLoc->getPuzzle()->getPrompt() << "\n";
-                    }
-                    cout << "Ответ: ";
-                    cin.ignore();
-                    getline(cin, answer);
-                    
-                    string trimmedAnswer = trim(answer);
-                    
-                    if (currentLoc->trySolvePuzzle(trimmedAnswer, damage)) {
-                        cout << "\n[!] Правильно! Локация открыта!\n";
-                        currentLoc->open();
-                        cout << "Нажми Enter чтобы продолжить...";
-                        cin.get();
-                    } else {
-                        cout << "\n[!] Неправильно! Вы получаете " << damage << " урона!\n";
-                        (*m_player).attack_me(damage);
-                        if ((*m_player).get_health() <= 0) {
-                            cout << "\n[!] Ты погиб... Игра окончена.\n";
-                            cout << "Хотите начать заново? (y/n): ";
-                            char again;
-                            cin >> again;
-                            if (again == 'y' || again == 'Y') {
-                                resetGame();
-                            } else {
-                                m_isRunning = false;
-                            }
-                            return;
-                        }
-                        cout << "Нажми Enter чтобы продолжить...";
-                        cin.get();
-                        return;
-                    }
                 }
-            } else {
+            }
+            
+            if (!targetLoc->isOpen()) {
                 int damage = 0;
                 string answer;
-                cout << "\n[!] Локация закрыта! Решите головоломку:\n";
-                if (currentLoc->getPuzzle()) {
-                    cout << currentLoc->getPuzzle()->getPrompt() << "\n";
+                cout << "\n[!] Локация закрыта! Реши головоломку:\n";
+                if (targetLoc->getPuzzle()) {
+                    cout << targetLoc->getPuzzle()->getPrompt() << "\n";
                 }
                 cout << "Ответ: ";
                 cin.ignore();
@@ -291,48 +320,54 @@ void GameEngine::movePlayer(int newX, int newY) {
                 
                 string trimmedAnswer = trim(answer);
                 
-                if (currentLoc->trySolvePuzzle(trimmedAnswer, damage)) {
+                if (targetLoc->trySolvePuzzle(trimmedAnswer, damage)) {
                     cout << "\n[!] Правильно! Локация открыта!\n";
-                    currentLoc->open();
-                    cout << "Нажми Enter чтобы продолжить...";
-                    cin.get();
+                    targetLoc->open();
                 } else {
-                    cout << "\n[!] Неправильно! Вы получаете " << damage << " урона!\n";
+                    cout << "\n[!] Неправильно! Урон: " << damage << "\n";
                     (*m_player).attack_me(damage);
                     if ((*m_player).get_health() <= 0) {
-                        cout << "\n[!] Ты погиб... Игра окончена.\n";
+                        cout << "\n[!] Ты погиб...\n";
                         cout << "Хотите начать заново? (y/n): ";
                         char again;
                         cin >> again;
-                        if (again == 'y' || again == 'Y') {
-                            resetGame();
-                        } else {
-                            m_isRunning = false;
-                        }
+                        if (again == 'y' || again == 'Y') resetGame();
+                        else m_isRunning = false;
                         return;
                     }
-                    cout << "Нажми Enter чтобы продолжить...";
+                    cout << "Нажми Enter...";
                     cin.get();
                     return;
                 }
             }
         }
         
-        if (currentLoc->isOpen()) {
-            if (m_currentLocationId + 1 < (int)m_locations.size()) {
-                m_currentLocationId++;
-                m_map = m_locations[m_currentLocationId]->getAsciiArt();
+        if (targetLoc->isOpen()) {
+            m_currentLocationId = targetId - 1;
+            m_map = m_locations[m_currentLocationId]->getAsciiArt();
+            
+            bool foundStart = false;
+            for (int y = 0; y < (int)m_map.size() && !foundStart; y++) {
+                for (int x = 0; x < (int)m_map[y].size(); x++) {
+                    if (m_map[y][x] == 'D') {
+                        m_playerX = x;
+                        m_playerY = y;
+                        foundStart = true;
+                        break;
+                    }
+                }
+            }
+            if (!foundStart) {
                 m_playerX = 1;
                 m_playerY = 1;
-                cout << "\n[!] Ты перешёл в новую локацию!\n";
-                if (m_currentLocationId == (int)m_locations.size() - 1) {
-                    cout << "[!] Это последняя локация! Найди выход!\n";
-                }
-                cout << "Нажми Enter чтобы продолжить...";
-                cin.get();
-            } else {
-                m_victory = true;
             }
+            
+            cout << "\n[!] Ты перешёл в: " << targetLoc->getName() << "\n";
+            if (m_currentLocationId == (int)m_locations.size() - 1) {
+                cout << "[!] Это последняя локация! Найди сокровище!\n";
+            }
+            cout << "Нажми Enter...";
+            cin.get();
         }
     }
 }
@@ -342,9 +377,19 @@ void GameEngine::interact() {
     
     if (target == 'C') {
         m_map[m_playerY][m_playerX] = '.';
-        
         static int chestNumber = 0;
         chestNumber++;
+
+        if (m_currentLocationId == 4) {
+            cout << "\n========================================\n";
+            cout << "  Ты открыл древний сундук!\n";
+            cout << "  Внутри сиял огромный АЛМАЗ!\n";
+            cout << "  Ты стал богат и славен!\n";
+            cout << "  Это ПОБЕДА!\n";
+            cout << "========================================\n";
+            m_victory = true;
+            return;
+        }
         
         if (chestNumber % 2 == 1) {
             (*m_player).add_to_inventory(make_unique<HealthPotion>(1, "Малое зелье", 30));
@@ -353,140 +398,134 @@ void GameEngine::interact() {
             (*m_player).add_to_inventory(make_unique<HealthPotion>(2, "Большое зелье", 60));
             cout << "\n[!] Ты открыл сундук и нашёл Большое зелье!\n";
         }
-        cout << "Нажми Enter чтобы продолжить...";
+        cout << "Нажми Enter...";
         cin.ignore();
         cin.get();
     } 
     else if (target == 'N') {
-        // Определяем тип NPC по локации
-        if (m_currentLocationId == 2) {
-            // Мудрец в локации 2 (Тёмный лес)
-            cout << "\n[Мудрец]: Приветствую, путник! Я хранитель знаний.\n";
-            cout << "[Мудрец]: Ответь на мою загадку, и я дам тебе ключ.\n";
-            cout << "Загадка: Что можно держать, но нельзя потрогать?\n";
-            cout << "Ответ: ";
+        // Мудрец в локации 2 (индекс 1)
+        if (m_currentLocationId == 1) {
+            cout << "\n[Мудрец]: Приветствую, путник!\n";
+            cout << "1 - Привет, ищу выход. Можешь помочь?\n";
+            cout << "2 - Отойди, старик!\n";
+            cout << "Выбор: ";
             
-            string answer;
-            cin.ignore();
-            getline(cin, answer);
+            int choice;
+            cin >> choice;
             
-            string trimmedAnswer = trim(answer);
-            
-            if (trimmedAnswer == "слово" || trimmedAnswer == "Слово" || 
-                trimmedAnswer == "обещание" || trimmedAnswer == "Обещание") {
-                cout << "[Мудрец]: Верно! Держи ключ.\n";
-                (*m_player).add_to_inventory(make_unique<Item>(10, 0, "Ключ"));
-                m_map[m_playerY][m_playerX] = '.';
-                cout << "\n[!] Ты получил ключ!\n";
+            if (choice == 1) {
+                cout << "\n[Мудрец]: Помогу, но сначала ответь на вопрос.\n";
+                cout << "Что можно держать, но нельзя потрогать?\n";
+                cout << "Ответ: ";
+                
+                string answer;
+                cin.ignore();
+                getline(cin, answer);
+                
+                if (trim(answer) == "слово" || trim(answer) == "Слово" || 
+                    trim(answer) == "slovo" || trim(answer) == "Slovo" ||
+                    trim(answer) == "обещание" || trim(answer) == "obeshaniye") {
+                    cout << "\n[Мудрец]: Верно! Держи ключ.\n";
+                    (*m_player).add_to_inventory(make_unique<Item>(10, 0, "Ключ"));
+                    cout << "\n[!] Ты получил КЛЮЧ!\n";
+                    m_map[m_playerY][m_playerX] = '.';
+                } else {
+                    cout << "\n[Мудрец]: Неправильно! Получи урон!\n";
+                    (*m_player).attack_me(15);
+                    cout << "\n[!] Ты получил 15 урона! HP: " << (*m_player).get_health() << "\n";
+                }
             } else {
-                cout << "[Мудрец]: Неправильно! Получи урон за невнимательность!\n";
-                (*m_player).attack_me(15);
-                cout << "[!] Ты получил 15 урона! Твоё HP: " << (*m_player).get_health() << "\n";
-                if ((*m_player).get_health() <= 0) {
-                    cout << "\n[!] Ты погиб...\n";
-                    cout << "Хотите начать заново? (y/n): ";
-                    char again;
-                    cin >> again;
-                    if (again == 'y' || again == 'Y') {
-                        resetGame();
-                    } else {
-                        m_isRunning = false;
-                    }
-                    return;
+                cout << "\n[Мудрец]: Грубиян! Уходи!\n";
+            }
+        } 
+        // Торговец в локации 3 (индекс 2)
+        else if (m_currentLocationId == 2) {
+            cout << "\n[Торговец]: Заходи, путник! Хорошие товары!\n";
+            cout << "1 - Что у тебя есть?\n";
+            cout << "2 - Мне ничего не нужно.\n";
+            cout << "Выбор: ";
+            
+            int choice;
+            cin >> choice;
+            
+            if (choice == 1) {
+                cout << "\n[Торговец]: У меня есть отличный ТОПОР! Отдам бесплатно!\n";
+                cout << "1 - Взять топор\n";
+                cout << "2 - Не надо\n";
+                cout << "Выбор: ";
+                
+                cin >> choice;
+                if (choice == 1) {
+                    (*m_player).add_to_inventory(make_unique<Weapon>(4, "Топор", 15));
+                    cout << "\n[!] Ты получил ТОПОР!\n";
+                    m_map[m_playerY][m_playerX] = '.';
                 }
             }
         } 
+        // Стражник в локации 4 (индекс 3)
         else if (m_currentLocationId == 3) {
-            // Торговец в локации 3 (Подземелье)
-            cout << "\n[Торговец]: Путник, хочешь купить зелье?\n";
-            cout << "Малое зелье - 30 HP (бесплатно для тебя!)\n";
-            cout << "1 - Взять зелье\n";
-            cout << "2 - Уйти\n";
+            cout << "\n[Стражник]: Стой! Прохода нет!\n";
+            cout << "1 - Пропусти, я ищу выход\n";
+            cout << "2 - Убирайся с дороги!\n";
             cout << "Выбор: ";
             
             int choice;
             cin >> choice;
             
             if (choice == 1) {
-                (*m_player).add_to_inventory(make_unique<HealthPotion>(1, "Малое зелье", 30));
-                cout << "\n[!] Ты получил Малое зелье!\n";
-                m_map[m_playerY][m_playerX] = '.';
-            }
-        } 
-        else {
-            // Стражник в локации 4 (Пещера стража) и других
-            cout << "\n[Стражник]: Стой! Кто идёт?\n";
-            cout << "1 - Я ищу выход, помоги мне\n";
-            cout << "2 - Отойди или будешь драться!\n";
-            cout << "Выбор: ";
-            
-            int choice;
-            cin >> choice;
-            
-            if (choice == 1) {
-                cout << "\n[Стражник]: Хорошо. Я дам тебе ключ, если докажешь свою силу.\n";
-                cout << "[Стражник]: Сразишься со мной?\n";
-                cout << "1 - Да, сражусь\n";
-                cout << "2 - Нет, уйду\n";
+                cout << "\n[Стражник]: Докажи свою силу в бою, и я пропущу!\n";
+                cout << "1 - Хорошо, сражусь\n";
+                cout << "2 - Пожалуй, уйду\n";
                 cout << "Выбор: ";
                 
-                int fightChoice;
-                cin >> fightChoice;
-                
-                if (fightChoice == 1) {
-                    NPC guard(100, "Стражник", 40, 8, NpcState::Hostile);
+                cin >> choice;
+                if (choice == 1) {
+                    NPC guard(100, "Стражник", 50, 12, NpcState::Hostile);
                     CombatState result = CombatSystem::runTurnBased((*m_player), guard);
                     
                     if (result == CombatState::PlayerWon) {
-                        cout << "\n[!] Ты победил стражника!\n";
-                        cout << "[!] Он выронил ключ!\n";
+                        cout << "\n[Стражник]: Ты силён! Проходи!\n";
                         (*m_player).add_to_inventory(make_unique<Item>(10, 0, "Ключ"));
+                        cout << "\n[!] Ты получил КЛЮЧ!\n";
                         m_map[m_playerY][m_playerX] = '.';
                     } else if (result == CombatState::PlayerLost) {
                         cout << "\n[!] Ты погиб в бою...\n";
                         cout << "Хотите начать заново? (y/n): ";
                         char again;
                         cin >> again;
-                        if (again == 'y' || again == 'Y') {
-                            resetGame();
-                        } else {
-                            m_isRunning = false;
-                        }
+                        if (again == 'y' || again == 'Y') resetGame();
+                        else m_isRunning = false;
                         return;
                     }
                 }
-            } 
-            else if (choice == 2) {
-                cout << "\n[Стражник]: Тогда умри!\n";
-                NPC guard(100, "Стражник", 40, 8, NpcState::Hostile);
+            } else {
+                cout << "\n[Стражник]: Тогда пеняй на себя!\n";
+                NPC guard(100, "Стражник", 50, 12, NpcState::Hostile);
                 CombatState result = CombatSystem::runTurnBased((*m_player), guard);
                 
                 if (result == CombatState::PlayerWon) {
                     cout << "\n[!] Ты победил стражника!\n";
-                    cout << "[!] Он выронил зелье!\n";
-                    (*m_player).add_to_inventory(make_unique<HealthPotion>(1, "Малое зелье", 30));
+                    cout << "[!] Он выронил ключ!\n";
+                    (*m_player).add_to_inventory(make_unique<Item>(10, 0, "Ключ"));
                     m_map[m_playerY][m_playerX] = '.';
                 } else if (result == CombatState::PlayerLost) {
                     cout << "\n[!] Ты погиб в бою...\n";
                     cout << "Хотите начать заново? (y/n): ";
                     char again;
                     cin >> again;
-                    if (again == 'y' || again == 'Y') {
-                        resetGame();
-                    } else {
-                        m_isRunning = false;
-                    }
+                    if (again == 'y' || again == 'Y') resetGame();
+                    else m_isRunning = false;
                     return;
                 }
             }
         }
-        cout << "Нажми Enter чтобы продолжить...";
+        cout << "Нажми Enter...";
         cin.ignore();
         cin.get();
     } 
     else {
         cout << "\n[!] Здесь не с чем взаимодействовать\n";
-        cout << "Нажми Enter чтобы продолжить...";
+        cout << "Нажми Enter...";
         cin.ignore();
         cin.get();
     }
@@ -502,41 +541,27 @@ void GameEngine::showInventory() {
         bool hasSword = (*m_player).hasItem(3);
         bool hasAxe = (*m_player).hasItem(4);
         
-        if (smallCount > 0) {
-            cout << "1 - Малое зелье (ID: 1, +30 HP) x" << smallCount << "\n";
-        }
-        if (bigCount > 0) {
-            cout << "2 - Большое зелье (ID: 2, +60 HP) x" << bigCount << "\n";
-        }
-        if (hasSword) {
-            cout << "3 - Меч (ID: 3, +8 урона)\n";
-        }
-        if (hasAxe) {
-            cout << "4 - Топор (ID: 4, +15 урона)\n";
-        }
-        if (keyCount > 0) {
-            cout << "5 - Ключ (ID: 10) x" << keyCount << "\n";
-        }
+        if (smallCount > 0) cout << "1 - Малое зелье x" << smallCount << "\n";
+        if (bigCount > 0) cout << "2 - Большое зелье x" << bigCount << "\n";
+        if (hasSword) cout << "3 - Меч\n";
+        if (hasAxe) cout << "4 - Топор\n";
+        if (keyCount > 0) cout << "5 - Ключ x" << keyCount << "\n";
         
         if (smallCount == 0 && bigCount == 0 && !hasSword && !hasAxe && keyCount == 0) {
             cout << "Инвентарь пуст!\n";
-            cout << "Нажми Enter чтобы продолжить...";
+            cout << "Нажми Enter...";
             cin.ignore();
             cin.get();
             return;
         }
         
-        cout << "0 - Выход\n";
-        cout << "===============================\n";
-        cout << "Выбор: ";
-        
+        cout << "0 - Выход\n===============================\nВыбор: ";
         int id;
         cin >> id;
         
         if (cin.fail()) {
             cin.clear();
             cin.ignore(10000, '\n');
-            cout << "Неверный ввод!\n";
             continue;
         }
         
@@ -544,76 +569,116 @@ void GameEngine::showInventory() {
         
         if (id == 1 && smallCount > 0) {
             (*m_player).use_potion(1);
-            cout << "\n[!] Малое зелье использовано! Твоё HP: " << (*m_player).get_health() << "\n";
-            cout << "Нажми Enter чтобы продолжить...";
-            cin.ignore();
-            cin.get();
+            cout << "HP: " << (*m_player).get_health() << "\n";
         } else if (id == 2 && bigCount > 0) {
             (*m_player).use_potion(2);
-            cout << "\n[!] Большое зелье использовано! HP: " << (*m_player).get_health() << "\n";
-            cout << "Нажми Enter чтобы продолжить...";
-            cin.ignore();
-            cin.get();
+            cout << "HP: " << (*m_player).get_health() << "\n";
         } else if (id == 3 && hasSword) {
             (*m_player).equipWeapon(3);
-            cout << "\n[!] Меч экипирован! Урон: " << (*m_player).getTotalDamage() << "\n";
-            cout << "Нажми Enter чтобы продолжить...";
-            cin.ignore();
-            cin.get();
+            cout << "Меч экипирован! Урон: " << (*m_player).getTotalDamage() << "\n";
         } else if (id == 4 && hasAxe) {
             (*m_player).equipWeapon(4);
-            cout << "\n[!] Топор экипирован! Урон: " << (*m_player).getTotalDamage() << "\n";
-            cout << "Нажми Enter чтобы продолжить...";
-            cin.ignore();
-            cin.get();
+            cout << "Топор экипирован! Урон: " << (*m_player).getTotalDamage() << "\n";
         } else if (id == 5 && keyCount > 0) {
-            cout << "\n[!] Это ключ. Он открывает закрытые локации.\n";
-            cout << "Нажми Enter чтобы продолжить...";
-            cin.ignore();
-            cin.get();
-        } else {
-            cout << "Неверный выбор!\n";
+            cout << "Ключ открывает закрытые локации.\n";
         }
+        cout << "Нажми Enter...";
+        cin.ignore();
+        cin.get();
     }
 }
 
 void GameEngine::showEquipMenu() {
     cout << "\n=== ЭКИПИРОВКА ОРУЖИЯ ===\n";
-    
-    if (!(*m_player).hasItem(3) && !(*m_player).hasItem(4)) {
-        cout << "У тебя нет оружия для экипировки!\n";
-        cout << "Нажми Enter чтобы продолжить...";
-        cin.ignore();
-        cin.get();
-        return;
-    }
-    
-    if ((*m_player).hasItem(3)) cout << "1 - Меч (ID: 3, +8 урона)\n";
-    if ((*m_player).hasItem(4)) cout << "2 - Топор (ID: 4, +15 урона)\n";
-    cout << "0 - Отмена\n";
-    cout << "Выбор: ";
+    if ((*m_player).hasItem(3)) cout << "1 - Меч\n";
+    if ((*m_player).hasItem(4)) cout << "2 - Топор\n";
+    cout << "0 - Отмена\nВыбор: ";
     
     int choice;
     cin >> choice;
     
-    if (cin.fail()) {
-        cin.clear();
-        cin.ignore(10000, '\n');
-        cout << "Неверный ввод!\n";
-        return;
-    }
-    
     if (choice == 1 && (*m_player).hasItem(3)) {
         (*m_player).equipWeapon(3);
-        cout << "\n[!] Меч экипирован! Урон: " << (*m_player).getTotalDamage() << "\n";
-        cout << "Нажми Enter чтобы продолжить...";
-        cin.ignore();
-        cin.get();
+        cout << "Меч экипирован! Урон: " << (*m_player).getTotalDamage() << "\n";
     } else if (choice == 2 && (*m_player).hasItem(4)) {
         (*m_player).equipWeapon(4);
-        cout << "\n[!] Топор экипирован! Урон: " << (*m_player).getTotalDamage() << "\n";
-        cout << "Нажми Enter чтобы продолжить...";
+        cout << "Топор экипирован! Урон: " << (*m_player).getTotalDamage() << "\n";
+    }
+    cout << "Нажми Enter...";
+    cin.ignore();
+    cin.get();
+}
+
+void GameEngine::saveGame() {
+    SaveData data;
+    data.health = (*m_player).get_health();
+    data.damage = (*m_player).get_damage();
+    data.equippedWeaponId = (*m_player).getEquippedWeaponId();
+    data.locationName = (*m_player).get_location();
+    data.currentLocationId = m_currentLocationId;
+    data.playerX = m_playerX;
+    data.playerY = m_playerY;
+    data.victory = m_victory;
+    data.isRunning = m_isRunning;
+    
+    for (int i = 1; i <= 10; i++) {
+        if ((*m_player).hasItem(i)) data.inventoryIds.push_back(i);
+    }
+    for (auto& loc : m_locations) data.locationStates.push_back(loc->isOpen());
+    
+    if (SaveManager::save("savegame.save", data)) {
+        cout << "\n[!] Игра сохранена!\n";
+        Logger::log("Game saved");
+    }
+    cout << "Нажми Enter...";
+    cin.ignore();
+    cin.get();
+}
+
+bool GameEngine::loadGame() {
+    if (!SaveManager::saveExists("savegame.save")) {
+        cout << "\n[!] Нет сохранения!\n";
+        cout << "Нажми Enter...";
         cin.ignore();
         cin.get();
+        return false;
     }
+    
+    SaveData data;
+    if (!SaveManager::load("savegame.save", data)) {
+        cout << "[!] Ошибка загрузки!\n";
+        return false;
+    }
+    
+    m_player = make_unique<Character>(data.locationName);
+    (*m_player).add_health(data.health - 100);
+    (*m_player).set_damage(data.damage);
+    if (data.equippedWeaponId != -1) (*m_player).equipWeapon(data.equippedWeaponId);
+    
+    for (int id : data.inventoryIds) {
+        if (id == 1) (*m_player).add_to_inventory(make_unique<HealthPotion>(1, "Малое зелье", 30));
+        if (id == 2) (*m_player).add_to_inventory(make_unique<HealthPotion>(2, "Большое зелье", 60));
+        if (id == 3) (*m_player).add_to_inventory(make_unique<Weapon>(3, "Меч", 8));
+        if (id == 4) (*m_player).add_to_inventory(make_unique<Weapon>(4, "Топор", 15));
+        if (id == 10) (*m_player).add_to_inventory(make_unique<Item>(10, 0, "Ключ"));
+    }
+    
+    m_currentLocationId = data.currentLocationId;
+    m_playerX = data.playerX;
+    m_playerY = data.playerY;
+    m_victory = data.victory;
+    m_isRunning = data.isRunning;
+    
+    setupLocations();
+    for (size_t i = 0; i < data.locationStates.size() && i < m_locations.size(); i++) {
+        if (data.locationStates[i]) m_locations[i]->open();
+    }
+    
+    m_map = m_locations[m_currentLocationId]->getAsciiArt();
+    cout << "\n[!] Игра загружена!\n";
+    Logger::log("Game loaded");
+    cout << "Нажми Enter...";
+    cin.ignore();
+    cin.get();
+    return true;
 }

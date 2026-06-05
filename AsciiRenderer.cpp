@@ -30,7 +30,7 @@ void AsciiRenderer::drawHUD(int health, int totalDamage) {
     cout << "HP: " << health << "/100";
     cout << " | Урон: " << totalDamage << "\n";
     cout << "========================================\n";
-    cout << "WASD - движение | E - действие | I - инвентарь | R - экипировка | Q - выход\n";
+    cout << "WASD - движение | E - действие | I - инвентарь | R - экипировка | Z - Сохранить | X - Загрузить | Q - выход\n";
 }
 
 void AsciiRenderer::drawInventory(const vector<string>& items) {

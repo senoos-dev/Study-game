@@ -12,17 +12,14 @@ void Chest::addItem(std::unique_ptr<Item> item) {
 }
 
 bool Chest::open(std::vector<std::unique_ptr<Item>>& inventory, int& damageDealt) {
+    (void)damageDealt;  // подавляем warning
+    
     if (!m_isLocked) {
         for (auto& item : m_items) {
             inventory.push_back(std::move(item));
         }
         m_items.clear();
         return true;
-    }
-    
-    if (m_puzzle) {
-        // Головоломка будет решаться отдельно
-        return false;
     }
     
     return false;

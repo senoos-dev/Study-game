@@ -1,135 +1,92 @@
 #include "DialogueTree.hpp"
 #include <iostream>
-#include "Logger.hpp"
+#include "Location.hpp"
+#include "HealthPotion.hpp"
 
 using namespace std;
 
-DialogueTree::DialogueTree(vector<DialogueNode> nodes) : m_nodes(std::move(nodes)) {}
-
-void DialogueTree::setNodes(vector<DialogueNode> nodes) {
-    m_nodes = std::move(nodes);
+DialogueTree::DialogueTree() {
+    m_nodes.resize(10); // запас
 }
 
-DialogueTree DialogueTree::createHermitTree() {
-    vector<DialogueNode> nodes;
-
-    nodes.push_back(DialogueNode{
-        "Старец: Кто идёт по моим залам?",
-        {
-            {"Я путник, ищу выход", 1, {}},
-            {"Отдай сокровища!", 2, {}},
-            {"Мне не о чем говорить", -1, {}},
-        }});
-
-    nodes.push_back(DialogueNode{
-        "Старец: Умный ответ. Возьми зелье и слушай: код сейфа — «орк».",
-        {
-            {"Спасибо", -1, {DialogueEffectType::GiveItem, 10, "Зелье старца", 40}},
-            {"А если я ошибусь в коде?", 3, {}},
-        }});
-
-    nodes.push_back(DialogueNode{
-        "Старец: Ты груб. Теперь я не друг.",
-        {
-            {"Извините", -1, {}},
-            {"Сражайся со мной!", -1, {DialogueEffectType::SetHostile, 0, "", 0}},
-        }});
-
-    nodes.push_back(DialogueNode{
-        "Старец: Тогда открою тебе потайной проход... если пожалеешь соседей.",
-        {
-            {"Открывай проход", -1, {DialogueEffectType::OpenLocation, 0, "hall", 0}},
-            {"Нет, я сам справлюсь", -1, {DialogueEffectType::HealPlayer, 0, "", 15}},
-        }});
-
-    return DialogueTree(nodes);
+void DialogueTree::addNode(int id, const string& text) {
+    if (id >= (int)m_nodes.size()) m_nodes.resize(id + 5);
+    m_nodes[id].text = text;
 }
 
-void DialogueTree::applyEffect(const DialogueEffect& effect,
-                               Character& player,
-                               NPC& npc,
-                               Location* locationToOpen) {
-    switch (effect.type) {
-    case DialogueEffectType::SetHostile:
-        npc.becomeHostile();
-        Logger::log("Dialogue: NPC " + npc.getName() + " became hostile");
-        break;
-    case DialogueEffectType::GiveItem:
-        {
-            unique_ptr<Item> newItem = make_unique<Item>(effect.itemId, effect.amount, effect.itemName);
-            player.add_to_inventory(move(newItem));
-            Logger::log("Dialogue: gave item " + effect.itemName);
-        }
-        break;
-    case DialogueEffectType::OpenLocation:
-        if (locationToOpen != nullptr) {
-            locationToOpen->open();
-            Logger::log("Dialogue: opened location " + to_string(locationToOpen->getId()));
+void DialogueTree::addOption(int fromNode, const string& optionText, int toNode,
+                              const string& effect, int effectValue, const string& effectTarget) {
+    if (fromNode >= (int)m_nodes.size()) m_nodes.resize(fromNode + 5);
+    DialogueNode::Option opt = {optionText, toNode, effect, effectValue, effectTarget};
+    m_nodes[fromNode].options.push_back(opt);
+}
+
+void DialogueTree::applyEffect(const string& effect, int value, const string& target,
+                                Character& player, NPC& npc) {
+    if (effect == "give_key") {
+        player.add_to_inventory(make_unique<Item>(10, 0, "Ключ"));
+        cout << "[!] Ты получил КЛЮЧ!\n";
+    } else if (effect == "give_potion") {
+        if (value == 1) {
+            player.add_to_inventory(make_unique<HealthPotion>(1, "Малое зелье", 30));
+            cout << "[!] Ты получил МАЛОЕ ЗЕЛЬЕ!\n";
         } else {
-            Logger::log("Dialogue: open location failed (null)");
+            player.add_to_inventory(make_unique<HealthPotion>(2, "Большое зелье", 60));
+            cout << "[!] Ты получил БОЛЬШОЕ ЗЕЛЬЕ!\n";
         }
-        break;
-    case DialogueEffectType::HealPlayer:
-        player.add_health(effect.amount);
-        Logger::log("Dialogue: healed player for " + to_string(effect.amount));
-        break;
-    default:
-        break;
+    } else if (effect == "hostile") {
+        npc.becomeHostile();
+        cout << "[!] NPC стал ВРАЖДЕБНЫМ!\n";
+    } else if (effect == "heal") {
+        player.add_health(value);
+        cout << "[!] Ты восстановил " << value << " HP!\n";
+    } else if (effect == "open_location") {
+        cout << "[!] " << target << " открыта!\n";
+        // Здесь нужна логика открытия локации по имени
     }
 }
 
-DialogueResult DialogueTree::run(int startNode,
-                                 Character& player,
-                                 NPC& npc,
-                                 Location* locationToOpen,
-                                 istream& in,
-                                 ostream& out) {
-    if (npc.isHostile()) {
-        out << npc.getName() << " не хочет говорить.\n";
-        return DialogueResult::StartedCombat;
-    }
-
-    int nodeIndex = startNode;
-    while (true) {
-        if (nodeIndex < 0 || nodeIndex >= (int)m_nodes.size()) {
-            out << "Конец диалога.\n";
-            return DialogueResult::Finished;
+void DialogueTree::start(int startNodeId, Character& player, NPC& npc) {
+    int currentNode = startNodeId;
+    
+    while (currentNode != -1) {
+        if (currentNode >= (int)m_nodes.size()) break;
+        
+        const auto& node = m_nodes[currentNode];
+        cout << "\n" << node.text << "\n";
+        
+        if (node.options.empty()) {
+            cout << "\n[Диалог окончен]\n";
+            break;
         }
-
-        const DialogueNode& node = m_nodes[nodeIndex];
-        out << "\n" << node.npcLine << "\n";
-        for (int i = 0; i < (int)node.choices.size(); i++) {
-            out << "  " << (i + 1) << ") " << node.choices[i].text << "\n";
+        
+        for (size_t i = 0; i < node.options.size(); i++) {
+            cout << "  " << (i + 1) << ") " << node.options[i].text << "\n";
         }
-        out << "  0) Выйти из диалога\n";
-        out << "Выбор: ";
-
-        int choiceNum = -1;
-        in >> choiceNum;
-        if (!in) {
-            return DialogueResult::Cancelled;
+        cout << "  0) Выйти из диалога\n";
+        cout << "Выбор: ";
+        
+        int choice;
+        cin >> choice;
+        
+        if (choice == 0) {
+            cout << "\n[Ты прервал разговор]\n";
+            break;
         }
-
-        if (choiceNum == 0) {
-            Logger::log("Dialogue cancelled with " + npc.getName());
-            return DialogueResult::Cancelled;
-        }
-
-        int idx = choiceNum - 1;
-        if (idx < 0 || idx >= (int)node.choices.size()) {
-            out << "Неверный выбор.\n";
+        
+        if (choice < 1 || choice > (int)node.options.size()) {
+            cout << "Неверный выбор!\n";
             continue;
         }
-
-        const DialogueChoice& picked = node.choices[idx];
-        if (picked.nextNode < 0) {
-            applyEffect(picked.effect, player, npc, locationToOpen);
-            if (npc.isHostile()) {
-                return DialogueResult::StartedCombat;
-            }
-            return DialogueResult::Finished;
+        
+        const auto& opt = node.options[choice - 1];
+        applyEffect(opt.effect, opt.effectValue, opt.effectTarget, player, npc);
+        
+        if (opt.effect == "hostile") {
+            cout << "\n[Начался бой!]\n";
+            break;
         }
-
-        nodeIndex = picked.nextNode;
+        
+        currentNode = opt.nextNodeId;
     }
 }

@@ -1,58 +1,51 @@
 #include "Logger.hpp"
-
-#include <chrono>
-#include <iomanip>
 #include <iostream>
-#include <sstream>
+#include <fstream>
+#include <chrono>
+#include <ctime>
 
 using namespace std;
 
-ofstream Logger::s_file;
-mutex Logger::s_mutex;
-bool Logger::s_initialized = false;
+static ofstream logFile;
+static string logFilename;
 
-string Logger::timestamp() {
+void Logger::init(const string& filename) {
+    logFilename = filename;
+    logFile.open(filename, ios::app);
+    if (logFile.is_open()) {
+        log("=== GAME START ===");
+    }
+}
+
+void Logger::log(const string& message) {
     auto now = chrono::system_clock::now();
-    auto t = chrono::system_clock::to_time_t(now);
-    tm localTm{};
-#ifdef _WIN32
-    localtime_s(&localTm, &t);
-#else
-    localtime_r(&t, &localTm);
-#endif
-    ostringstream oss;
-    oss << put_time(&localTm, "%Y-%m-%d %H:%M:%S");
-    return oss.str();
+    time_t time = chrono::system_clock::to_time_t(now);
+    string timeStr = ctime(&time);
+    timeStr.pop_back(); // убираем \n
+    
+    if (logFile.is_open()) {
+        logFile << "[" << timeStr << "] " << message << endl;
+        logFile.flush();
+    }
+    // Не выводим в консоль, чтобы не засорять
 }
 
-void Logger::init(const string& filePath) {
-    lock_guard<mutex> lock(s_mutex);
-    if (s_initialized) {
-        return;
+void Logger::error(const string& message) {
+    auto now = chrono::system_clock::now();
+    time_t time = chrono::system_clock::to_time_t(now);
+    string timeStr = ctime(&time);
+    timeStr.pop_back();
+    
+    if (logFile.is_open()) {
+        logFile << "[" << timeStr << "] ERROR: " << message << endl;
+        logFile.flush();
     }
-    s_file.open(filePath, ios::app);
-    if (!s_file.is_open()) {
-        cerr << "Logger: cannot open " << filePath << endl;
-        return;
-    }
-    s_initialized = true;
-    s_file << "[" << timestamp() << "] Logger started" << endl;
-}
-
-void Logger::log(const string& event) {
-    lock_guard<mutex> lock(s_mutex);
-    string line = "[" + timestamp() + "] " + event;
-    if (s_initialized && s_file.is_open()) {
-        s_file << line << endl;
-    }
-    cout << "[LOG] " << event << endl;
+    cerr << "[ERROR] " << message << endl;
 }
 
 void Logger::close() {
-    lock_guard<mutex> lock(s_mutex);
-    if (s_initialized && s_file.is_open()) {
-        s_file << "[" << timestamp() << "] Logger stopped" << endl;
-        s_file.close();
-        s_initialized = false;
+    if (logFile.is_open()) {
+        log("=== GAME END ===");
+        logFile.close();
     }
 }

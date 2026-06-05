@@ -98,3 +98,6 @@ int Character::getTotalDamage() const {
 void Character::set_location(const std::string& newLoc) {
     location = newLoc;
 }
+std::string Character::get_location() const {
+    return location;
+}

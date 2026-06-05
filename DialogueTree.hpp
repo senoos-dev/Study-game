@@ -1,70 +1,38 @@
 #ifndef DIALOGUE_TREE_HPP
 #define DIALOGUE_TREE_HPP
 
-#include <iostream>
 #include <string>
 #include <vector>
-
+#include <memory>
 #include "Character.hpp"
-#include "Location.hpp"
 #include "NPC.hpp"
 
-using namespace std;
-
-enum class DialogueEffectType {
-    None,
-    SetHostile,
-    GiveItem,
-    OpenLocation,
-    HealPlayer
-};
-
-struct DialogueEffect {
-    DialogueEffectType type = DialogueEffectType::None;
-    int itemId = 0;
-    std::string itemName = "";
-    int amount = 0;
-};
-
-struct DialogueChoice {
-    string text;
-    int nextNode = -1; // -1 => конечный узел, применить effect
-    DialogueEffect effect;
-};
-
 struct DialogueNode {
-    string npcLine;
-    vector<DialogueChoice> choices;
-};
-
-enum class DialogueResult {
-    Finished,
-    StartedCombat,
-    Cancelled
+    std::string text;
+    struct Option {
+        std::string text;
+        int nextNodeId;
+        std::string effect;  // "give_key", "give_potion", "hostile", "heal", "open_location", "none"
+        int effectValue;     // для give_potion: 1(малое) или 2(большое), для heal: количество HP
+        std::string effectTarget; // для open_location: название локации
+    };
+    std::vector<Option> options;
 };
 
 class DialogueTree {
 public:
-    DialogueTree() = default;
-    explicit DialogueTree(vector<DialogueNode> nodes);
-
-    void setNodes(vector<DialogueNode> nodes);
-    static DialogueTree createHermitTree();
-
-    DialogueResult run(int startNode,
-                       Character& player,
-                       NPC& npc,
-                       Location* locationToOpen,
-                       istream& in = cin,
-                       ostream& out = cout);
-
+    DialogueTree();
+    void addNode(int id, const std::string& text);
+    void addOption(int fromNode, const std::string& optionText, int toNode, 
+                   const std::string& effect = "none", int effectValue = 0, 
+                   const std::string& effectTarget = "");
+    
+    void start(int startNodeId, Character& player, NPC& npc);
+    
 private:
-    void applyEffect(const DialogueEffect& effect,
-                     Character& player,
-                     NPC& npc,
-                     Location* locationToOpen);
-
-    vector<DialogueNode> m_nodes;
+    std::vector<DialogueNode> m_nodes;
+    void applyEffect(const std::string& effect, int value, const std::string& target, 
+                     Character& player, NPC& npc);
 };
 
 #endif

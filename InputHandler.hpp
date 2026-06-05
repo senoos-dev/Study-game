@@ -7,7 +7,7 @@ enum class Action {
     MoveUp, MoveDown, MoveLeft, MoveRight,
     Interact, OpenInventory, EquipWeapon, Quit, None,
     Attack, UsePotion, Flee,
-    SelectOne, SelectTwo, SelectThree
+    SelectOne, SelectTwo, SelectThree, QuickSave, QuickLoad
 };
 
 class InputHandler {

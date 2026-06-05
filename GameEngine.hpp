@@ -12,6 +12,9 @@ public:
     GameEngine();
     ~GameEngine();
     
+    void saveGame();
+    bool loadGame();
+    void showSaveMenu();
     
     bool init();
     void run();

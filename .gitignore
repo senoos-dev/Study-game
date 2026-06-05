@@ -2,5 +2,7 @@
 
 *.tmp
 *.o
+*.log
+*.save
 
 .vscode/

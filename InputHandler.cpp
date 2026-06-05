@@ -15,6 +15,8 @@ Action InputHandler::getAction() {
         case 'e': case 'E': return Action::Interact;
         case 'i': case 'I': return Action::OpenInventory;
         case 'r': case 'R': return Action::EquipWeapon;
+        case 'z': case 'Z': return Action::QuickSave;
+        case 'x': case 'X': return Action::QuickLoad;
         case 'q': case 'Q': return Action::Quit;
         default: return Action::None;
     }

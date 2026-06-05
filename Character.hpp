@@ -26,6 +26,7 @@ public:
     void equipWeapon(int weaponId);
     void unequipWeapon();
     int getTotalDamage() const;
+    int getEquippedWeaponId() const { return m_equippedWeaponId; }
 
     bool is_alive() const;
     string get_location() const;
